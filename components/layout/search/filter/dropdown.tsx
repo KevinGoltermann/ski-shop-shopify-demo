@@ -37,7 +37,7 @@ export default function FilterItemDropdown({ list }: { list: ListItem[] }) {
       }
     });
     // If no active item found, use the first item as default (usually "Relevance")
-    if (!found && list.length > 0) {
+    if (!found && list.length > 0 && list[0]) {
       setActive(list[0].title);
     }
   }, [pathname, list, searchParams]);
