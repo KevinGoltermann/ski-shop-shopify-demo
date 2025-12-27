@@ -228,15 +228,70 @@ export async function createCart(): Promise<Cart> {
 export async function addToCart(
   lines: { merchandiseId: string; quantity: number }[]
 ): Promise<Cart> {
-  const cartId = (await cookies()).get('cartId')?.value!;
-  const res = await shopifyFetch<ShopifyAddToCartOperation>({
-    query: addToCartMutation,
-    variables: {
-      cartId,
-      lines
+  const cartId = (await cookies()).get('cartId')?.value;
+  
+  // If no cart ID, create a new cart with the items
+  if (!cartId) {
+    const newCart = await createCart();
+    const cookieStore = await cookies();
+    cookieStore.set('cartId', newCart.id!);
+    
+    // Add items to the newly created cart
+    if (lines.length > 0) {
+      const res = await shopifyFetch<ShopifyAddToCartOperation>({
+        query: addToCartMutation,
+        variables: {
+          cartId: newCart.id!,
+          lines
+        }
+      });
+      return reshapeCart(res.body.data.cartLinesAdd.cart);
     }
-  });
-  return reshapeCart(res.body.data.cartLinesAdd.cart);
+    
+    return newCart;
+  }
+
+  try {
+    const res = await shopifyFetch<ShopifyAddToCartOperation>({
+      query: addToCartMutation,
+      variables: {
+        cartId,
+        lines
+      }
+    });
+    return reshapeCart(res.body.data.cartLinesAdd.cart);
+  } catch (error: any) {
+    // Handle invalid cart ID errors - create a new cart and retry
+    const errorMessage = error?.message || error?.error?.message || '';
+    if (
+      errorMessage.includes('Invalid global id') ||
+      errorMessage.includes('Variable $cartId') ||
+      errorMessage.includes('was provided invalid value')
+    ) {
+      // Clear the invalid cart ID cookie
+      (await cookies()).delete('cartId');
+      
+      // Create a new cart and add items to it
+      const newCart = await createCart();
+      const cookieStore = await cookies();
+      cookieStore.set('cartId', newCart.id!);
+      
+      if (lines.length > 0) {
+        const res = await shopifyFetch<ShopifyAddToCartOperation>({
+          query: addToCartMutation,
+          variables: {
+            cartId: newCart.id!,
+            lines
+          }
+        });
+        return reshapeCart(res.body.data.cartLinesAdd.cart);
+      }
+      
+      return newCart;
+    }
+    // Re-throw other errors
+    throw error;
+  }
 }
 
 export async function removeFromCart(lineIds: string[]): Promise<Cart> {
@@ -274,17 +329,33 @@ export async function getCart(): Promise<Cart | undefined> {
     return undefined;
   }
 
-  const res = await shopifyFetch<ShopifyCartOperation>({
-    query: getCartQuery,
-    variables: { cartId }
-  });
+  try {
+    const res = await shopifyFetch<ShopifyCartOperation>({
+      query: getCartQuery,
+      variables: { cartId }
+    });
 
-  // Old carts becomes `null` when you checkout.
-  if (!res.body.data.cart) {
-    return undefined;
+    // Old carts becomes `null` when you checkout.
+    if (!res.body.data.cart) {
+      return undefined;
+    }
+
+    return reshapeCart(res.body.data.cart);
+  } catch (error: any) {
+    // Handle invalid cart ID errors (e.g., corrupted cookie with UUID instead of Global ID)
+    const errorMessage = error?.message || error?.error?.message || '';
+    if (
+      errorMessage.includes('Invalid global id') ||
+      errorMessage.includes('Variable $cartId') ||
+      errorMessage.includes('was provided invalid value')
+    ) {
+      // Cannot delete cookie here (getCart is called from Server Component, not Server Action)
+      // The cookie will be overwritten when a new cart is created
+      return undefined;
+    }
+    // Re-throw other errors
+    throw error;
   }
-
-  return reshapeCart(res.body.data.cart);
 }
 
 export async function getCollection(
