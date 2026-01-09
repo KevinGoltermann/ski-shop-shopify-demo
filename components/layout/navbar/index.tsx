@@ -72,7 +72,9 @@ export async function Navbar() {
               <Search />
             </Suspense>
           </div>
-          <CartModal />
+          <Suspense fallback={null}>
+            <CartModal />
+          </Suspense>
         </div>
       </div>
     </nav>
