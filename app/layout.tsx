@@ -1,13 +1,14 @@
-import { Analytics } from '@vercel/analytics/next';
-import { CartProvider } from 'components/cart/cart-context';
-import { Navbar } from 'components/layout/navbar';
-import { WelcomeToast } from 'components/welcome-toast';
-import { GeistSans } from 'geist/font/sans';
-import { getCart } from 'lib/shopify';
-import { ReactNode, Suspense } from 'react';
-import { Toaster } from 'sonner';
-import './globals.css';
-import { baseUrl } from 'lib/utils';
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { CartProvider } from "components/cart/cart-context";
+import { Navbar } from "components/layout/navbar";
+import { WelcomeToast } from "components/welcome-toast";
+import { GeistSans } from "geist/font/sans";
+import { getCart } from "lib/shopify";
+import { ReactNode, Suspense } from "react";
+import { Toaster } from "sonner";
+import "./globals.css";
+import { baseUrl } from "lib/utils";
 
 const { SITE_NAME } = process.env;
 
@@ -15,16 +16,16 @@ export const metadata = {
   metadataBase: new URL(baseUrl),
   title: {
     default: SITE_NAME!,
-    template: `%s | ${SITE_NAME}`
+    template: `%s | ${SITE_NAME}`,
   },
   robots: {
     follow: true,
-    index: true
-  }
+    index: true,
+  },
 };
 
 export default async function RootLayout({
-  children
+  children,
 }: {
   children: ReactNode;
 }) {
@@ -46,6 +47,7 @@ export default async function RootLayout({
             </main>
           </Suspense>
           <Analytics />
+          <SpeedInsights />
         </CartProvider>
       </body>
     </html>
