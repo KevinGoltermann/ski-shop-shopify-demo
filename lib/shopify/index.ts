@@ -597,11 +597,11 @@ export async function revalidate(req: NextRequest): Promise<NextResponse> {
   }
 
   if (isCollectionUpdate) {
-    revalidateTag(TAGS.collections, 'seconds');
+    revalidateTag(TAGS.collections, 'max');
   }
 
   if (isProductUpdate) {
-    revalidateTag(TAGS.products, 'seconds');
+    revalidateTag(TAGS.products, 'max');
   }
 
   return NextResponse.json({ status: 200, revalidated: true, now: Date.now() });
